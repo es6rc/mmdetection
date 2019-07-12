@@ -7,7 +7,7 @@ model = dict(
         type='ResNet',
         depth=50,
         num_stages=4,
-        out_indices=(0, 1, 2, 3),
+        out_indices=(0, 1, 2, 3), # 4 FPN stages 
         frozen_stages=1,
         style='pytorch',
         dcn=dict(
@@ -19,14 +19,14 @@ model = dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
-        num_outs=5),
+        num_outs=5),    # 4, exclude pooling which is the fifth.
     rpn_head=dict(
         type='RPNHead',
         in_channels=256,
         feat_channels=256,
-        anchor_scales=[8],
+        anchor_scales=[8],   #  Use 8x8 anchor, histogram of the input bboxes
         anchor_ratios=[0.5, 1.0, 2.0],
-        anchor_strides=[4, 8, 16, 32, 64],
+        anchor_strides=[4, 8, 16, 32, 64], ## 4, Exclude 64
         target_means=[.0, .0, .0, .0],
         target_stds=[1.0, 1.0, 1.0, 1.0],
         loss_cls=dict(
@@ -44,7 +44,7 @@ model = dict(
             in_channels=256,
             fc_out_channels=1024,
             roi_feat_size=7,
-            num_classes=81,
+            num_classes=81,  #21
             target_means=[0., 0., 0., 0.],
             target_stds=[0.1, 0.1, 0.2, 0.2],
             reg_class_agnostic=True,
@@ -62,7 +62,7 @@ model = dict(
             in_channels=256,
             fc_out_channels=1024,
             roi_feat_size=7,
-            num_classes=81,
+            num_classes=81, #21
             target_means=[0., 0., 0., 0.],
             target_stds=[0.05, 0.05, 0.1, 0.1],
             reg_class_agnostic=True,
@@ -80,7 +80,7 @@ model = dict(
             in_channels=256,
             fc_out_channels=1024,
             roi_feat_size=7,
-            num_classes=81,
+            num_classes=81, # 21
             target_means=[0., 0., 0., 0.],
             target_stds=[0.033, 0.033, 0.067, 0.067],
             reg_class_agnostic=True,
@@ -104,8 +104,8 @@ train_cfg = dict(
             ignore_iof_thr=-1),
         sampler=dict(
             type='RandomSampler',
-            num=256,
-            pos_fraction=0.5,
+            num=256,  # For rpn training
+            pos_fraction=0.5, # half pos half neg
             neg_pos_ub=-1,
             add_gt_as_proposals=False),
         allowed_border=0,
@@ -128,8 +128,8 @@ train_cfg = dict(
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
-                num=512,
-                pos_fraction=0.25,
+                num=256,  #region proposals => 256
+                pos_fraction=0.25,  # pos fraction
                 neg_pos_ub=-1,
                 add_gt_as_proposals=True),
             pos_weight=-1,
@@ -143,7 +143,7 @@ train_cfg = dict(
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
-                num=512,
+                num=256,  #region proposals => 256
                 pos_fraction=0.25,
                 neg_pos_ub=-1,
                 add_gt_as_proposals=True),
@@ -158,7 +158,7 @@ train_cfg = dict(
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
-                num=512,
+                num=512,  #region proposals => 256
                 pos_fraction=0.25,
                 neg_pos_ub=-1,
                 add_gt_as_proposals=True),
@@ -175,7 +175,9 @@ test_cfg = dict(
         nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
-        score_thr=0.05, nms=dict(type='nms', iou_thr=0.5), max_per_img=100),
+        score_thr=0.05, 
+        nms=dict(type='nms', iou_thr=0.5), ## soft_nms", better performance
+        max_per_img=100), 
     keep_all_stages=False)
 # dataset settings
 dataset_type = 'CocoDataset'
@@ -192,7 +194,7 @@ data = dict(
         img_scale=(1333, 800),
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
-        flip_ratio=0.5,
+        flip_ratio=0,
         with_mask=False,
         with_crowd=True,
         with_label=True),
@@ -222,14 +224,17 @@ data = dict(
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
+# warmming up part
 lr_config = dict(
     policy='step',
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[8, 11])
+    step=[8, 11]) ## learning rate change steps
+
 checkpoint_config = dict(interval=1)
 # yapf:disable
+# print info 
 log_config = dict(
     interval=50,
     hooks=[
